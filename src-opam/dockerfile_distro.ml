@@ -279,6 +279,8 @@ module OV = Ocaml_version
 
 let distro_arches ov (d:t) =
   match resolve_alias d, ov with
+  | `Windows (`Msvc, _), ov when OV.(compare Releases.v5_00_0 ov) <= 0 -> []
+  | _, ov when OV.(compare Releases.v5_00_0 ov) <= 0 -> [ `X86_64 ]
   | `Debian `V11, ov when OV.(compare Releases.v4_05_0 ov) = -1 -> [ `I386; `X86_64; `Aarch64; `Ppc64le; `Aarch32; `S390x ]
   | `Debian `V10, ov when OV.(compare Releases.v4_05_0 ov) = -1 -> [ `I386; `X86_64; `Aarch64; `Ppc64le; `Aarch32; `S390x ]
   | `Debian `V9, ov when OV.(compare Releases.v4_05_0 ov) = -1 -> [ `I386; `X86_64; `Aarch64; `Aarch32 ]
