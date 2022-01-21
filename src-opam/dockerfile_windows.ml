@@ -94,11 +94,15 @@ module Cygwin = struct
   let run_sh_ocaml_env ?(cyg=default) args fmt = ksprintf (run_sh ~cyg "ocaml-env exec %s -- %s" (String.concat " " args)) fmt
 
   let install_cygsympathy_from_source cyg =
-    run {|mkdir %s\lib\cygsympathy|} cyg.root
+    run {|mkdir %s\lib\cygsympathy && mkdir %s\etc\postinstall|} cyg.root cyg.root
     @@ add ~src:["https://raw.githubusercontent.com/metastack/cygsympathy/master/cygsympathy.cmd"]
          ~dst:(cyg.root ^ {|\lib\cygsympathy\|}) ()
     @@ add ~src:["https://raw.githubusercontent.com/metastack/cygsympathy/master/cygsympathy.sh"]
          ~dst:(cyg.root ^ {|\lib\cygsympathy\cygsympathy|}) ()
+    (* Beware: CygSymPathy must be executed last, or it may miss files
+       installed by other post-install scripts. Use a name that is
+       greater than every other script in the lexicographic order. *)
+    @@ run {|mklink %s\etc\postinstall\zp_zcygsympathy.sh %s\lib\cygsympathy\cygsympathy|} cyg.root cyg.root
 
   let install_msvs_tools_from_source ?(version="0.4.1") cyg =
     add ~src:["https://github.com/metastack/msvs-tools/archive/" ^ version ^ ".tar.gz"]
@@ -112,17 +116,13 @@ module Cygwin = struct
     ksprintf (cygwin ~cyg "--packages %s") fmt
 
   let setup ?(cyg=default) ?(winsymlinks_native=true) ?(extra=[]) () =
-    add ~src:["https://www.cygwin.com/setup-x86_64.exe"] ~dst:{|C:\cygwin-setup-x86_64.exe|} ()
+    (if winsymlinks_native then env [("CYGWIN", "winsymlinks:native")] else empty)
+    @@ add ~src:["https://www.cygwin.com/setup-x86_64.exe"] ~dst:{|C:\cygwin-setup-x86_64.exe|} ()
     @@ install_cygsympathy_from_source cyg
     @@ cygwin ~cyg "--packages %s" (extra |> List.sort_uniq String.compare |> String.concat ",")
-    @@ (if winsymlinks_native then env [("CYGWIN", "winsymlinks:native")] else empty)
-    (* Beware: CygSymPathy must be executed last, or it may miss files
-       installed by other post-install scripts. Use a name that is
-       greater than every other script in the lexicographic order. *)
-    @@ run {|mklink %s\etc\postinstall\zp_zcygsympathy.sh %s\lib\cygsympathy\cygsympathy|} cyg.root cyg.root
     @@ install_msvs_tools_from_source cyg
     @@ prepend_path (List.map ((^) cyg.root) [{|\bin|}])
-    @@ run {|gawk -i inplace "/(^#)|(^$)/{print;next}{$4=""noacl,""$4; print}" %s\etc\fstab|} cyg.root
+    @@ run {|awk -i inplace "/(^#)|(^$)/{print;next}{$4=""noacl,""$4; print}" %s\etc\fstab|} cyg.root
     @@ workdir {|%s\home\opam|} cyg.root
 
   let update ?(cyg=default) () =
