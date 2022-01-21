@@ -40,7 +40,7 @@ let install_opam_from_source_gen ~clone ?(add_default_link=true) ?(prefix= "/usr
     (if enable_0install_solver then " CONFIGURE_ARGS=--with-0install-solver" else "") prefix prefix branch prefix branch
   else
     run
-    "cd /tmp/opam && git worktree add ../opam-build-%s %s && cd ../opam-build-%s && ln -s ../opam/src_ext/archives src_ext/archives && env PATH=\"/tmp/opam/bootstrap/ocaml/bin:$PATH\" ./configure --enable-cold-check%s && env PATH=\"/tmp/opam/bootstrap/ocaml/bin:$PATH\" make lib-ext all && mkdir -p %s/bin && cp /tmp/opam-build-%s/opam %s/bin/opam-%s && chmod a+x %s/bin/opam-%s && rm -rf /tmp/opam-build-%s" branch hash branch (if enable_0install_solver then " --with-0install-solver" else "") prefix branch prefix branch prefix branch branch) @@
+    "cd /tmp/opam-sources && cp -P -R -p . ../opam-build-%s && cd ../opam-build-%s && git checkout %s && ln -s ../opam/src_ext/archives src_ext/archives && env PATH=\"/tmp/opam/bootstrap/ocaml/bin:$PATH\" ./configure --enable-cold-check%s && env PATH=\"/tmp/opam/bootstrap/ocaml/bin:$PATH\" make lib-ext all && mkdir -p %s/bin && cp /tmp/opam-build-%s/opam %s/bin/opam-%s && chmod a+x %s/bin/opam-%s && rm -rf /tmp/opam-build-%s" branch branch hash (if enable_0install_solver then " --with-0install-solver" else "") prefix branch prefix branch prefix branch branch) @@
   if add_default_link then
     run "ln %s/bin/opam-%s %s/bin/opam" prefix branch prefix
   else empty
@@ -156,7 +156,7 @@ let install_opam_from_source_unix = install_opam_from_source_gen ~clone:false
 
 let install_opams ?prefix opam_master_hash opam_branches =
   (* XXX Will "break" the Cygwin image *)
-  run "git clone https://github.com/ocaml/opam /tmp/opam && cd /tmp/opam && git checkout %s && env MAKE='make -j' shell/bootstrap-ocaml.sh && make -C src_ext cache-archives" opam_master_hash @@
+  run "git clone https://github.com/ocaml/opam /tmp/opam && cd /tmp/opam && cp -P -R -p . ../opam-sources && git checkout %s && env MAKE='make -j' shell/bootstrap-ocaml.sh && make -C src_ext cache-archives" opam_master_hash @@
   List.fold_left (fun acc {branch; hash; enable_0install_solver; _} ->
       let add_default_link = Some false in
       let enable_0install_solver = Some enable_0install_solver in
