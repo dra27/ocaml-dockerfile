@@ -48,14 +48,109 @@ let install_opam_from_source_gen ~clone ?(add_default_link=true) ?(prefix= "/usr
 let install_opam_from_source =
   install_opam_from_source_gen ~clone:true
 
-let install_bubblewrap_from_source ?(prefix="/usr/local") () =
-  let rel = "0.4.1" in
-  let file = Printf.sprintf "bubblewrap-%s.tar.xz" rel in
-  let url = Printf.sprintf "https://github.com/projectatomic/bubblewrap/releases/download/v%s/bubblewrap-%s.tar.xz" rel rel in
-  run "curl -fOL %s" url @@
-  run "tar xf %s" file @@
-  run "cd bubblewrap-%s && ./configure --prefix=%s && make && sudo make install" rel prefix @@
-  run "rm -rf %s bubblewrap-%s" file rel
+let distro_bubblewrap (distro : D.t) =
+  match distro with
+  |`Ubuntu `V12_04 -> None (* XXX *)
+  |`Ubuntu `V14_04 -> None (* XXX *)
+  |`Ubuntu `V15_04 -> None (* XXX *)
+  |`Ubuntu `V15_10 -> None (* XXX *)
+  |`Ubuntu `V16_04 -> None (* XXX *)
+  |`Ubuntu `V16_10 -> None (* XXX *)
+  |`Ubuntu `V17_04 -> None (* XXX *)
+  |`Ubuntu `V17_10 -> None (* XXX *)
+  |`Ubuntu `V18_04 -> Some (0, 2, 1)
+  |`Ubuntu `V18_10 -> Some (0, 2, 1) (* XXX *)
+  |`Ubuntu `V19_04 -> Some (0, 2, 1) (* XXX *)
+  |`Ubuntu `V19_10 -> Some (0, 2, 1) (* XXX *)
+  |`Ubuntu `V20_04 -> Some (0, 4, 0) (* XXX *)
+  |`Ubuntu `V20_10 -> Some (0, 4, 0) (* XXX *)
+  |`Ubuntu `V21_04 -> Some (0, 4, 1)
+  |`Ubuntu `V21_10 -> Some (0, 4, 1)
+  |`Ubuntu `V22_04 -> Some (0, 5, 0)
+  |`Debian `Stable -> Some (0, 4, 1) (* XXX ALIAS?? *)
+  |`Debian `Unstable -> Some (0, 5, 0)
+  |`Debian `Testing ->  Some (0, 5, 0) (* XXX ALIAS?? *)
+  |`Debian `V11 -> Some (0, 4, 1)
+  |`Debian `V10 -> Some (0, 4, 1) (* XXX Only in back-ports? *)
+  |`Debian `V9 -> Some (0, 3, 1)
+  |`Debian `V8 -> None (* XXX *)
+  |`Debian `V7 -> None (* XXX *)
+  |`CentOS `V6 -> None (* XXX *)
+  |`CentOS `V7 -> None (* XXX *)
+  |`CentOS `V8 -> Some (0, 4, 0)
+  |`Fedora `V21 -> None (* XXX *)
+  |`Fedora `V22 -> None (* XXX *)
+  |`Fedora `V23 -> None (* XXX *)
+  |`Fedora `V24 -> None (* XXX *)
+  |`Fedora `V25 -> None (* XXX *)
+  |`Fedora `V26 -> Some (0, 2, 0)
+  |`Fedora `V27 -> Some (0, 2, 1)
+  |`Fedora `V28 -> Some (0, 3, 0)
+  |`Fedora `V29 -> Some (0, 3, 1)
+  |`Fedora `V30 -> Some (0, 3, 3)
+  |`Fedora `V31 -> Some (0, 4, 1)
+  |`Fedora `V32 -> Some (0, 4, 1)
+  |`Fedora `V33 -> Some (0, 4, 1)
+  |`Fedora `V34 -> Some (0, 4, 1)
+  |`Fedora `V35 -> Some (0, 5, 0)
+  |`OracleLinux `V7 -> None (* XXX *)
+  |`OracleLinux `V8 -> Some (0, 4, 0) (* XXX Alias to CentOS??*)
+  |`Alpine `V3_3 -> None (* XXX *)
+  |`Alpine `V3_4 -> None (* XXX *)
+  |`Alpine `V3_5 -> None (* XXX *)
+  |`Alpine `V3_6 -> None (* XXX *)
+  |`Alpine `V3_7 -> None (* XXX *)
+  |`Alpine `V3_8 -> Some (0, 2, 0)
+  |`Alpine `V3_9 -> Some (0, 3, 1)
+  |`Alpine `V3_10 -> Some (0, 3, 3)
+  |`Alpine `V3_11 -> Some (0, 4, 1)
+  |`Alpine `V3_12 -> Some (0, 4, 1)
+  |`Alpine `V3_13 -> Some (0, 4, 1)
+  |`Alpine `V3_14 -> Some (0, 4, 1)
+  |`Alpine `V3_15 -> Some (0, 5, 0)
+  |`Archlinux `Latest -> Some (0, 5, 0)
+  |`OpenSUSE `V42_1 -> None (* XXX *)
+  |`OpenSUSE `V42_2 -> None (* XXX *)
+  |`OpenSUSE `V42_3 -> None (* XXX *)
+  |`OpenSUSE `V15_0 -> Some (0, 2, 0)
+  |`OpenSUSE `V15_1 -> Some (0, 3, 3)
+  |`OpenSUSE `V15_2 -> Some (0, 4, 1)
+  |`OpenSUSE `V15_3 -> Some (0, 4, 1)
+  |`Cygwin _ -> None
+  |`Windows _ -> None
+  |`Alpine `Latest | `Ubuntu `Latest | `Ubuntu `LTS | `CentOS `Latest | `Fedora `Latest
+  |`OracleLinux `Latest | `OpenSUSE `Latest -> assert false (* XXX TODO Generalise the aliasing so it returns the actual value - could do this for the OCaml values too in Dockerfile_distro *)
+
+let bubblewrap_minimum = (0, 4, 1)
+
+let install_bubblewrap_from_source ?(prefix="/usr/local") distro =
+  let (major, minor, revision) as rel = bubblewrap_minimum in
+  match distro_bubblewrap distro with
+  | Some release when release >= rel -> empty
+  | _ ->
+    let rel = Printf.sprintf "%d.%d.%d" major minor revision in
+    let file = Printf.sprintf "bubblewrap-%s.tar.xz" rel in
+    let url = Printf.sprintf "https://github.com/projectatomic/bubblewrap/releases/download/v%s/bubblewrap-%s.tar.xz" rel rel in
+    run "curl -fOL %s" url @@
+    run "tar xf %s" file @@
+    run "cd bubblewrap-%s && ./configure --prefix=%s && make && sudo make install" rel prefix @@
+    run "rm -rf %s bubblewrap-%s" file rel
+
+let bubblewrap_and_dev_packages distro =
+  let dev_packages = match D.package_manager distro with
+  | `Apk -> Linux.Apk.dev_packages
+  | `Apt -> Linux.Apt.dev_packages
+  | `Yum -> Linux.RPM.dev_packages
+  | `Zypper -> Linux.Zypper.dev_packages
+  | `Pacman -> Linux.Pacman.dev_packages
+  | _ -> assert false
+  in
+  match distro_bubblewrap distro with
+  | Some version when version >= bubblewrap_minimum ->
+    dev_packages ~extra:"bubblewrap" ()
+  | _ ->
+    copy ~from:"0" ~src:["/usr/local/bin/bwrap"] ~dst:"/usr/bin/bwrap" ()
+    @@ dev_packages ()
 
 let install_bubblewrap_wrappers =
   (* Enable bubblewrap *)
@@ -177,14 +272,15 @@ let apk_opam2 ?(labels=[]) ?arch ~opam_hashes distro () =
   header ?arch distro @@ label (("distro_style", "apk") :: labels)
   @@ Linux.Apk.install "build-base bzip2 git tar curl ca-certificates openssl"
   @@ Linux.Git.init ()
+  @@ install_bubblewrap_from_source distro
   @@ install_opams opam_master_hash opam_branches
   @@ run "strip /usr/local/bin/opam*"
   @@ from ~tag img
   @@ Linux.Apk.add_repository ~tag:"edge" "https://dl-cdn.alpinelinux.org/alpine/edge/main"
   @@ Linux.Apk.add_repository ~tag:"edgecommunity" "https://dl-cdn.alpinelinux.org/alpine/edge/community"
   @@ Linux.Apk.add_repository ~tag:"testing" "https://dl-cdn.alpinelinux.org/alpine/edge/testing"
+  @@ bubblewrap_and_dev_packages distro
   @@ copy_opams ~src:"/usr/local/bin" ~dst:"/usr/bin" opam_branches
-  @@ Linux.Apk.dev_packages ()
   @@ Linux.Apk.add_user ~uid:1000 ~gid:1000 ~sudo:true "opam"
   @@ install_bubblewrap_wrappers @@ Linux.Git.init ()
 
@@ -196,13 +292,12 @@ let apt_opam2 ?(labels=[]) ?arch distro ~opam_hashes () =
   header ?arch distro @@ label (("distro_style", "apt") :: labels)
   @@ Linux.Apt.install "build-essential curl git libcap-dev sudo"
   @@ Linux.Git.init ()
-  @@ install_bubblewrap_from_source ()
+  @@ install_bubblewrap_from_source distro
   @@ install_opams opam_master_hash opam_branches
   @@ from ~tag img
-  @@ copy ~from:"0" ~src:["/usr/local/bin/bwrap"] ~dst:"/usr/bin/bwrap" ()
-  @@ copy_opams ~src:"/usr/local/bin" ~dst:"/usr/bin" opam_branches
   @@ run "ln -fs /usr/share/zoneinfo/Europe/London /etc/localtime"
-  @@ Linux.Apt.dev_packages ()
+  @@ bubblewrap_and_dev_packages distro
+  @@ copy_opams ~src:"/usr/local/bin" ~dst:"/usr/bin" opam_branches
   @@ run "echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections"
   @@ Linux.Apt.add_user ~uid:1000 ~sudo:true "opam"
   @@ install_bubblewrap_wrappers @@ Linux.Git.init ()
@@ -230,21 +325,19 @@ let yum_opam2 ?(labels= []) ?arch ~yum_workaround ~enable_powertools ~opam_hashe
   @@ Linux.RPM.update
   @@ Linux.RPM.dev_packages ~extra:"which tar curl xz libcap-devel openssl" ()
   @@ Linux.Git.init ()
-  @@ install_bubblewrap_from_source ()
+  @@ install_bubblewrap_from_source distro
   @@ install_opams ~prefix:"/usr" opam_master_hash opam_branches
   @@ from ~tag img
   @@ run "yum --version || dnf install -y yum"
   @@ workaround
   @@ Linux.RPM.update
-  @@ Linux.RPM.dev_packages ()
-  @@ (if enable_powertools then run "yum config-manager --set-enabled powertools" @@ Linux.RPM.update else empty)
-  @@ copy ~from:"0" ~src:["/usr/local/bin/bwrap"] ~dst:"/usr/bin/bwrap" ()
+  @@ bubblewrap_and_dev_packages distro
   @@ copy_opams ~src:"/usr/bin" ~dst:"/usr/bin" opam_branches
+  @@ (if enable_powertools then run "yum config-manager --set-enabled powertools" @@ Linux.RPM.update else empty)
   @@ run
        "sed -i.bak '/LC_TIME LC_ALL LANGUAGE/aDefaults    env_keep += \"OPAMYES OPAMJOBS OPAMVERBOSE\"' /etc/sudoers"
   @@ Linux.RPM.add_user ~uid:1000 ~sudo:true "opam"
   @@ install_bubblewrap_wrappers @@ Linux.Git.init ()
-
 
 (* Zypper based Dockerfile *)
 let zypper_opam2 ?(labels=[]) ?arch ~opam_hashes distro () =
@@ -253,11 +346,10 @@ let zypper_opam2 ?(labels=[]) ?arch ~opam_hashes distro () =
   header ?arch distro @@ label (("distro_style", "zypper") :: labels)
   @@ Linux.Zypper.dev_packages ()
   @@ Linux.Git.init ()
-  @@ install_bubblewrap_from_source ()
+  @@ install_bubblewrap_from_source distro
   @@ install_opams ~prefix:"/usr" opam_master_hash opam_branches
   @@ from ~tag img
-  @@ Linux.Zypper.dev_packages ()
-  @@ copy ~from:"0" ~src:["/usr/local/bin/bwrap"] ~dst:"/usr/bin/bwrap" ()
+  @@ bubblewrap_and_dev_packages distro
   @@ copy_opams ~src:"/usr/bin" ~dst:"/usr/bin" opam_branches
   @@ Linux.Zypper.add_user ~uid:1000 ~sudo:true "opam"
   @@ install_bubblewrap_wrappers @@ Linux.Git.init ()
@@ -269,11 +361,12 @@ let pacman_opam2 ?(labels=[]) ?arch ~opam_hashes distro () =
   header ?arch distro @@ label (("distro_style", "pacman") :: labels)
   @@ Linux.Pacman.dev_packages ()
   @@ Linux.Git.init ()
+  @@ install_bubblewrap_from_source distro
   @@ install_opams opam_master_hash opam_branches
   @@ run "strip /usr/local/bin/opam*"
   @@ from ~tag img
+  @@ bubblewrap_and_dev_packages distro
   @@ copy_opams ~src:"/usr/local/bin" ~dst:"/usr/bin" opam_branches
-  @@ Linux.Pacman.dev_packages ()
   @@ Linux.Pacman.add_user ~uid:1000 ~sudo:true "opam"
   @@ install_bubblewrap_wrappers @@ Linux.Git.init ()
 
