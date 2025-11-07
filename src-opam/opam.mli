@@ -60,16 +60,16 @@ val gen_opam2_distro :
   string * Dockerfile.t
 (** [gen_opam2_distro ~opam_hashes d] will generate a Dockerfile for Linux
     distribution [d] with opam 2.0, opam 2.1, opam 2.2 and opam master, per hash
-    given in parameter.
+    given in parameter. For Windows builds, [?override_tag] defaults to the tag
+    returned by {!Distro.base_distro_tag} and is ignored for non-Windows builds.
     @return
       a tuple of the Docker tag and the Dockerfile. If [clone_opam_repo] is true
       (the default) then the Dockerfile will also git clone the official
       opam-repository into [/home/opam/opam-repository]. If [arch] is not
       specified, it defaults to the base image that is assumed to be multiarch
       (the main exception to this is i386, which requires different base images
-      from amd64). For native Windows distributions, if [winget] is omitted,
-      then winget will be build in an prepended build stage. If specified, then
-      winget will be pulled from the [winget] external image. *)
+      from amd64). The label [distro_style] is added by default, as well as any
+      additional labels specified in [?labels]. *)
 
 val ocaml_depexts : Distro.t -> Ocaml_version.t -> Dockerfile.t
 (** [ocaml_depexts distro version] returns packages that are required under
