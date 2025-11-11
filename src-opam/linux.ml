@@ -160,8 +160,8 @@ module Apk = struct
     let home = "/home/" ^ username in
     (match gid with
       | None -> empty
-      | Some gid -> run "addgroup -S -g %d %s" gid username)
-    @@ run "adduser -S %s%s%s"
+      | Some gid -> run "addgroup -g %d %s" gid username)
+    @@ run "adduser -D %s%s%s"
          (match uid with None -> "" | Some d -> sprintf "-u %d " d)
          (match gid with None -> "" | Some _ -> sprintf "-G %s " username)
          username

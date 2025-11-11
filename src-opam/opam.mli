@@ -71,6 +71,15 @@ val gen_opam2_distro :
       from amd64). The label [distro_style] is added by default, as well as any
       additional labels specified in [?labels]. *)
 
+val gen_distro :
+  ?override_tag:string ->
+  ?arch:Ocaml_version.arch ->
+  ?labels:(string * string) list ->
+  ?opam:(string * string option) ->
+  ?alias:string ->
+  Distro.t ->
+  Dockerfile.t
+
 val ocaml_depexts : Distro.t -> Ocaml_version.t -> Dockerfile.t
 (** [ocaml_depexts distro version] returns packages that are required under
     [distro] by the OCaml distribution at version [version]. *)
